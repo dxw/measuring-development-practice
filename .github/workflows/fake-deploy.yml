@@ -1,0 +1,42 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will download a prebuilt Ruby version, install dependencies, and  run linters
+name: Deploy
+
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start deploy
+        id: start
+        run: |
+          echo "::set-output name=time::$(date +%s)\n"
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Ruby and install gems
+        uses: ruby/setup-ruby@473e4d8fe5dd94ee328fdfca9f8c9c7afc9dae5e
+        with:
+          bundler-cache: true
+      # Add or Replace any other Linters here
+      - name: Deploy
+        id: deploy
+        run: |
+          echo "faking a deploy"
+          sleep 5
+          echo "fake deploy finished"
+          echo "::set-output name=finished_at::$(date +%s)\n"
+
+
+      - name: Send data to influxdb
+        env:
+          INFLUX_API_TOKEN: ${{ secrets.INFLUX_API_TOKEN }}
+          INFLUX_ORG: ${{ secrets.INFLUX_ORG }}
+          INFLUX_BUCKET: ${{ secrets.INFLUX_BUCKET }}
+        run: |
+          bundle exec ruby deployment-frequency.rb --started_at ${{ steps.start.outputs.time }} --finished_at ${{ steps.deploy.outputs.finished_at }} --status ${{ steps.deploy.outcome }} --commit_sha $GITHUB_SHA --project_name $(basename $GITHUB_REPOSITORY) --branch_name $(echo $GITHUB_REF | sed s#refs/heads/## ) --repository_url ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}  --environment "prod" --hosting_environment "dalmatian" --deployment_id $GITHUB_RUN_ID
