@@ -2,13 +2,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  hello_world_job:
+  pull_request_stats_job:
     runs-on: ubuntu-latest
-    name: A job to say hello
+    name: Pull request statistics
     steps:
-      # To use this repository's private action,
-      # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Hello world action step
+      - name: Get pull request statistics
         uses: ./pull-request-stats-action
