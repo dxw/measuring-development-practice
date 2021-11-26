@@ -1,6 +1,6 @@
 # action.yml
-name: 'Hello World'
-description: 'Prove this works'
+name: 'Pull request statistics'
+description: 'Displays basic stats for all open PRs on a repo'
 runs:
   using: 'docker'
   image: '../Dockerfile'
