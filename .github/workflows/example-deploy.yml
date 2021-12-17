@@ -14,13 +14,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Pull request statistics
+        uses: ./pull-request-stats-action
+
       - name: Before action
         id: before-action
         uses: ./before-action
+
       - name: Setup Ruby and install gems
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+
       - name: Deploy
         id: deploy
         run: |
@@ -28,6 +34,7 @@ jobs:
           sleep 5
           echo "fake deploy finished"
           echo "::set-output name=finished_at::$(date +%s)\n"
+
       - name: After action
         id: after-action
         uses: ./after-action
