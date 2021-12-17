@@ -9,21 +9,18 @@ on:
   workflow_dispatch:
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Start deploy
-        id: start
-        run: |
-          echo "::set-output name=time::$(date +%s)\n"
-
       - name: Checkout code
         uses: actions/checkout@v2
-
+      - name: Before action
+        id: before-action
+        uses: ./before-action
       - name: Setup Ruby and install gems
-        uses: ruby/setup-ruby@473e4d8fe5dd94ee328fdfca9f8c9c7afc9dae5e
+        uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-      # Add or Replace any other Linters here
       - name: Deploy
         id: deploy
         run: |
@@ -39,4 +36,4 @@ jobs:
           INFLUX_ORG: ${{ secrets.INFLUX_ORG }}
           INFLUX_BUCKET: ${{ secrets.INFLUX_BUCKET }}
         run: |
-          bundle exec ruby deployment-frequency.rb --started_at ${{ steps.start.outputs.time }} --finished_at ${{ steps.deploy.outputs.finished_at }} --status ${{ steps.deploy.outcome }} --commit_sha $GITHUB_SHA --project_name $(basename $GITHUB_REPOSITORY) --branch_name $(echo $GITHUB_REF | sed s#refs/heads/## ) --repository_url ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}  --environment "prod" --hosting_environment "dalmatian" --deployment_id $GITHUB_RUN_ID
+          bundle exec ruby deployment-frequency.rb --started_at ${{ steps.before-action.outputs.start-time }} --finished_at ${{ steps.deploy.outputs.finished_at }} --status ${{ steps.deploy.outcome }} --commit_sha $GITHUB_SHA --project_name $(basename $GITHUB_REPOSITORY) --branch_name $(echo $GITHUB_REF | sed s#refs/heads/## ) --repository_url ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}  --environment "prod" --hosting_environment "dalmatian" --deployment_id $GITHUB_RUN_ID
