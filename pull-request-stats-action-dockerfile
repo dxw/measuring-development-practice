@@ -7,4 +7,4 @@ RUN bundle install
 
 COPY scripts /scripts
 
-ENTRYPOINT ["ruby", "/scripts/pull_release_stats.rb", "--repository", "dxw/playbook"]
+ENTRYPOINT ruby /scripts/pull_release_stats.rb --path ./ --repository $GITHUB_REPOSITORY
