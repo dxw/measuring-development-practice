@@ -31,9 +31,11 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+repository = options[:repository]
+
 client = Octokit::Client.new()
 
-pull_requests = client.pull_requests(options[:repository], state: options[:state])
+pull_requests = client.pull_requests(repository, state: options[:state])
 
 # Reject drafts
 pull_requests = pull_requests.reject(&:draft) unless options[:drafts]
@@ -44,10 +46,8 @@ pull_requests = pull_requests.select { |pr| options[:end_date] >= pr.created_at 
 
 output = {}
 
-repo_path = clone(options[:repository])
-
 pull_requests.map(&:number).each do |prn|
-  commits = client.pull_request_commits(options[:repository], prn)
+  commits = client.pull_request_commits(repository, prn)
 
   commits = commits.select { |c| c.author.type == 'User' } unless options[:bots]
 
