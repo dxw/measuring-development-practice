@@ -1,0 +1,9 @@
+# action.yml
+name: 'After action'
+description: 'Collects finish time'
+outputs:
+  finish-time:
+    description: 'the time the action run ends'
+runs:
+  using: 'docker'
+  image: '../after-action-dockerfile'
