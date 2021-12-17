@@ -54,7 +54,7 @@ pull_requests = pull_requests.reject(&:draft) unless options[:drafts]
 pull_requests = pull_requests.select { |pr| options[:start_date] <= pr.created_at } if options[:start_date]
 pull_requests = pull_requests.select { |pr| options[:end_date] >= pr.created_at } if options[:end_date]
 
-output = {}
+output = {"total_changes","changes_per_commit","number_of_commits"}
 
 pull_requests.map(&:number).each do |prn|
   commits = client.pull_request_commits(repository, prn)
