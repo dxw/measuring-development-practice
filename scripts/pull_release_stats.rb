@@ -10,6 +10,10 @@ OptionParser.new do |opts|
     options[:repository] = arg
   end
 
+  opts.on("-p", "--path PATH") do |arg|
+    options[:path] = arg
+  end
+
   opts.on("--start", "--start-date DATE", Time) do |arg|
     options[:start_date] = arg
   end
@@ -32,6 +36,12 @@ OptionParser.new do |opts|
 end.parse!
 
 repository = options[:repository]
+
+repo_path = if options[:path]
+  options[:path]
+else
+  clone(repository)
+end
 
 client = Octokit::Client.new()
 
