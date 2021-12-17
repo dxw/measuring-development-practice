@@ -1,0 +1,7 @@
+FROM alpine
+
+RUN apk add bash
+
+COPY scripts /scripts
+
+ENTRYPOINT ["/scripts/before-action.sh"]
