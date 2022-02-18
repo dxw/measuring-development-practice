@@ -2,6 +2,7 @@ require 'octokit'
 require 'optparse'
 require 'optparse/time'
 require 'date'
+require 'tty-table'
 
 # To measure:
 # - code changes count
@@ -134,7 +135,7 @@ pull_requests = pull_requests.reject(&:draft) unless options[:drafts]
 pull_requests = pull_requests.select { |pr| options[:start_date] <= pr.created_at } if options[:start_date]
 pull_requests = pull_requests.select { |pr| options[:end_date] >= pr.created_at } if options[:end_date]
 
-output = {}
+output = []
 
 pull_requests.map(&:number).each do |prn|
   commits = client.pull_request_commits(repository, prn)
@@ -145,7 +146,9 @@ pull_requests.map(&:number).each do |prn|
 
   pr = PullRequest.new(repo_path, commit_hashes)
 
-  output[prn] = pr.stats.values.join(",")
+  output << [prn] + pr.stats.values
 end
 
-puts output.values.join("\n")
+table = TTY::Table.new(["Pull request #", "Total changes", "Changes per commit", "Number of commits"], output)
+
+puts table.render(:unicode, {padding: [0,1]})
