@@ -2,8 +2,19 @@ require 'octokit'
 require 'optparse'
 require 'optparse/time'
 require 'date'
-require './scripts/commit-measure.rb'
 
+# To measure:
+# - code changes count
+#   - lines added
+#   - lines removed
+#   - files modified
+# - length of commit message
+# - file changes count
+#   - created
+#   - deleted
+#   - renamed
+# - number of merge commits
+#
 class PullRequest
 
   attr_reader :commits
