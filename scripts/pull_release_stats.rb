@@ -4,6 +4,47 @@ require 'optparse/time'
 require 'date'
 require './scripts/commit-measure.rb'
 
+class PullRequest
+
+  attr_reader :commits
+
+  def initialize(repo_path, commit_hashes)
+    @commits = commit_hashes.map do |hash|
+      Commit.new(repo_path, hash)
+    end
+  end
+
+  def first_commit
+    @commits.first
+  end
+
+  def last_commit
+    @commits.last
+  end
+
+  def number_of_commits
+    @commits.length
+  end
+
+  def total_changes
+    commits.map(&:lines_changed).sum
+  end
+
+  def changes_per_commit
+    return 0 if number_of_commits == 0
+
+    total_changes / number_of_commits
+  end
+
+  def stats
+    {
+      total_changes: total_changes,
+      changes_per_commit: changes_per_commit,
+      number_of_commits: number_of_commits
+    }
+  end
+end
+
 class Commit
 
   attr_reader :files_changed, :insertions, :deletions
