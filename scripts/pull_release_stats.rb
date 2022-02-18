@@ -3,6 +3,7 @@ require 'optparse'
 require 'optparse/time'
 require 'date'
 require 'tty-table'
+require 'dotenv/load'
 
 # To measure:
 # - code changes count
@@ -124,7 +125,7 @@ else
   clone(repository)
 end
 
-client = Octokit::Client.new()
+client = Octokit::Client.new(access_token: ENV["GITHUB_PERSONAL_ACCESS_TOKEN"])
 
 pull_requests = client.pull_requests(repository, state: options[:state])
 
