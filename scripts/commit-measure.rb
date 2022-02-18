@@ -58,15 +58,4 @@ class PullRequest
       number_of_commits: number_of_commits
     }
   end
-
-end
-
-def clone(repo_name)
-  repo_path = "tmp/repos/#{repo_name}"
-
-  `rm -r -f tmp`
-
-  `git clone "https://github.com/#{repo_name}" #{repo_path}`
-
-  repo_path
 end

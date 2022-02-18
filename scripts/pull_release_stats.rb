@@ -4,6 +4,16 @@ require 'optparse/time'
 require 'date'
 require './scripts/commit-measure.rb'
 
+def clone(repo_name)
+  repo_path = "tmp/repos/#{repo_name}"
+
+  `rm -r -f tmp`
+
+  `git clone "https://github.com/#{repo_name}" #{repo_path}`
+
+  repo_path
+end
+
 options = {}
 OptionParser.new do |opts|
   opts.on("-r", "--repository URL") do |arg|
