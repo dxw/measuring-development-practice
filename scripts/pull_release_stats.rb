@@ -21,11 +21,20 @@ class PullRequest
 
   attr_reader :commits
 
-  def initialize(repo_path, commit_hashes)
+  def initialize(repo_path, repository, pull_request_number, client)
+    @repository = repository
+    @pr_number = pull_request_number
+    @client = client
     @commits = commit_hashes.map do |hash|
       Commit.new(repo_path, hash)
     end
   end
+
+  def commit_hashes
+    commits = @client.pull_request_commits(@repository, @pr_number)
+    commit_hashes = commits.map(&:sha)
+  end
+
 
   def first_commit
     @commits.first
@@ -86,6 +95,10 @@ def clone(repo_name)
   repo_path
 end
 
+def client
+  @client ||= Octokit::Client.new(access_token: ENV["GITHUB_PERSONAL_ACCESS_TOKEN"])
+end
+
 options = {}
 OptionParser.new do |opts|
   opts.on("-r", "--repository URL") do |arg|
@@ -125,8 +138,6 @@ else
   clone(repository)
 end
 
-client = Octokit::Client.new(access_token: ENV["GITHUB_PERSONAL_ACCESS_TOKEN"])
-
 pull_requests = client.pull_requests(repository, state: options[:state])
 
 # Reject drafts
@@ -140,6 +151,8 @@ output = []
 
 pull_requests.map(&:number).each do |prn|
   # get the octokit PR object
+  # for some reason this contains more useful info the the pull_requests we already have, see the docs:
+  # https://docs.github.com/en/rest/reference/pulls#get-a-pull-request
   pull_request_object = client.pull_request(repository, prn)
 
   # create an array of interesting PR stats
@@ -149,13 +162,7 @@ pull_requests.map(&:number).each do |prn|
     pull_request_object.deletions
   ]
 
-  commits = client.pull_request_commits(repository, prn)
-
-  commits = commits.select { |c| c.author.type == 'User' } unless options[:bots]
-
-  commit_hashes = commits.map(&:sha)
-
-  pr = PullRequest.new(repo_path, commit_hashes)
+  pr = PullRequest.new(repo_path, repository, prn, client)
 
   output << [prn] + pr.stats.values + pull_request_stats
 end
