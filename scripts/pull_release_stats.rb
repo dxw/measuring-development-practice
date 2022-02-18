@@ -139,6 +139,16 @@ pull_requests = pull_requests.select { |pr| options[:end_date] >= pr.created_at 
 output = []
 
 pull_requests.map(&:number).each do |prn|
+  # get the octokit PR object
+  pull_request_object = client.pull_request(repository, prn)
+
+  # create an array of interesting PR stats
+  pull_request_stats = [
+    pull_request_object.changed_files,
+    pull_request_object.additions,
+    pull_request_object.deletions
+  ]
+
   commits = client.pull_request_commits(repository, prn)
 
   commits = commits.select { |c| c.author.type == 'User' } unless options[:bots]
@@ -147,9 +157,11 @@ pull_requests.map(&:number).each do |prn|
 
   pr = PullRequest.new(repo_path, commit_hashes)
 
-  output << [prn] + pr.stats.values
+  output << [prn] + pr.stats.values + pull_request_stats
 end
 
-table = TTY::Table.new(["Pull request #", "Total changes", "Changes per commit", "Number of commits"], output)
+headers = ["Pull request #", "Total changes", "Changes per commit", "Number of commits", "Changed files", "Additions", "Deletions"]
+
+table = TTY::Table.new(headers, output)
 
 puts table.render(:unicode, {padding: [0,1]})
