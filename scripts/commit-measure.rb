@@ -9,24 +9,6 @@
 #   - deleted
 #   - renamed
 # - number of merge commits
-class Commit
-
-  attr_reader :files_changed, :insertions, :deletions
-
-  def initialize(repo_path, commit_hash)
-    stats = `cd #{repo_path} && git show --format="" --shortstat #{commit_hash}`
-
-    @files_changed = /(\d)+ files changed/.match(stats)&.captures&.fetch(0).to_i || 0
-    @insertions = /(\d)+ insertions/.match(stats)&.captures&.fetch(0).to_i || 0
-    @deletions = /(\d)+ deletions/.match(stats)&.captures&.fetch(0).to_i || 0
-  end
-
-  def lines_changed
-    insertions + deletions
-  end
-
-end
-
 class PullRequest
 
   attr_reader :commits
