@@ -4,7 +4,7 @@ source "https://rubygems.org"
 
 git_source(:github) { |repo_name| "https://github.com/dxw/measuring-development-practice" }
 
-gem 'octokit'
-gem 'optparse'
-gem 'influxdb-client'
-gem 'dotenv'
+gem "octokit"
+gem "optparse"
+gem "influxdb-client"
+gem "dotenv"
