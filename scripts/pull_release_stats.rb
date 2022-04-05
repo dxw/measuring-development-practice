@@ -2,7 +2,7 @@ require 'octokit'
 require 'optparse'
 require 'optparse/time'
 require 'date'
-require './scripts/commit-measure.rb'
+require './lib/commit-measure.rb'
 
 options = {}
 OptionParser.new do |opts|
