@@ -13,6 +13,16 @@ monitored_sites = [
     project: "roda",
     env: "staging",
     endpoint: "https://staging.report-official-development-assistance.service.gov.uk/health_check"
+  },
+  {
+    project: "rpr",
+    env: "production",
+    endpoint: "https://www.regulated-professions.beis.gov.uk/health-check"
+  },
+  {
+    project: "rpr",
+    env: "staging",
+    endpoint: "https://#{ENV["RPR_STAGING_BASIC_AUTH_USERNAME"]}:#{ENV["RPR_STAGING_BASIC_AUTH_PASSWORD"]}@staging.regulated-professions.beis.gov.uk/health-check"
   }
 ]
 
