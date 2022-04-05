@@ -65,26 +65,26 @@ duration = (options[:finished_at].to_i)-(options[:started_at].to_i)
 client = InfluxDB2::Client.new('https://eu-central-1-1.aws.cloud2.influxdata.com', token,
   precision: InfluxDB2::WritePrecision::NANOSECOND)
 
-  write_api = client.create_write_api
+write_api = client.create_write_api
 
-  hash = {name: 'deployment_frequency',
-    tags: {
-      status: options[:status],
-      commit_sha: options[:commit_sha],
-      project_name: options[:project_name],
-      branch_name: options[:branch_name],
-      repository_url: options[:repository_url],
-      environment: options[:environment],
-      hosting_environment: options[:hosting_environment],
-      deployment_id: options[:deployment_id]
-    },
-    fields: {
-      started_at: options[:started_at],
-      finished_at: options[:finished_at],
-      duration: "#{duration}"
-    },
-    time: Time.now.utc}
+hash = {name: 'deployment_frequency',
+  tags: {
+    status: options[:status],
+    commit_sha: options[:commit_sha],
+    project_name: options[:project_name],
+    branch_name: options[:branch_name],
+    repository_url: options[:repository_url],
+    environment: options[:environment],
+    hosting_environment: options[:hosting_environment],
+    deployment_id: options[:deployment_id]
+  },
+  fields: {
+    started_at: options[:started_at],
+    finished_at: options[:finished_at],
+    duration: "#{duration}"
+  },
+  time: Time.now.utc}
 
-  write_api.write(data: hash, bucket: bucket, org: org)
+write_api.write(data: hash, bucket: bucket, org: org)
 
 
