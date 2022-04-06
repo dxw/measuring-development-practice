@@ -106,8 +106,8 @@ monitored_sites.each do |site|
       ending_sha: current_sha,
       deploy_time: latest_deploy_time,
       repo: repo,
-      project: project,
-      env: env
+      project: site[:project],
+      env: site[:env]
     }
 
     pr_data = analyse_work_between(git_client: @git_client, release: release)

@@ -14,7 +14,7 @@ release = {
 
 release[:ending_sha] = "87f71354467dda7435cbbb2a26169a6e9860cfc0"
 release[:starting_sha] = "ddf9f3bd7ab7945f958a17951576f776c9e9ccaa"
-release[:deploy_time] = Date.new(2022,3,29).to_time
+release[:deploy_time] = Time.new(2022, 3, 29, 15, 0, 5)
 
 pr_data = analyse_work_between(git_client: @git_client, release: release)
 

@@ -7,9 +7,9 @@ def pull_request_data_for_influx(pr_number:, release:, started_time:, merged_tim
     },
     fields: {
       pr: pr_number,
-      work_started_at: started_time,
-      work_merged_at: merged_time,
-      work_deployed_at: release[:deploy_time],
+      work_started_at: started_time.to_i,
+      work_merged_at: merged_time.to_i,
+      work_deployed_at: release[:deploy_time].to_i,
       time_to_merge: (merged_time.to_i - started_time.to_i),
       time_to_deploy: (release[:deploy_time].to_i - started_time.to_i), # nanoseconds
       deploy_sha: release[:ending_sha]
