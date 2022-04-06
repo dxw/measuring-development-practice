@@ -1,9 +1,9 @@
-require "influxdb-client"
 require "net/http"
 require "json"
 require "dotenv"
 require "octokit"
 require "./lib/release_analyser.rb"
+require "./lib/influx_client.rb"
 
 monitored_sites = [
   {
@@ -31,13 +31,6 @@ monitored_sites = [
     repository: "UKGovernmentBEIS/regulated-professions-register"
   }
 ]
-
-def influx_client(influx_url, influx_organisation_name, influx_bucket_name, influx_api_token)
-  InfluxDB2::Client.new(influx_url, influx_api_token,
-    bucket: influx_bucket_name,
-    org: influx_organisation_name,
-    precision: InfluxDB2::WritePrecision::SECOND)
-end
 
 def get_health_check(url)
   uri = URI(url)
@@ -67,10 +60,6 @@ def get_last_sha_from_influx(influx_bucket_name, project:, env:)
   result[0].records[0].values["_value"]
 end
 
-def send_data_to_influx(write_api, data)
-  write_api.write(data: data)
-end
-
 def deployment_data_for_influx(sha, deploy_time, project:, env:)
   {
     name: "deployments",
@@ -85,13 +74,9 @@ end
 
 Dotenv.load
 
-influx_api_token = ENV["INFLUX_API_TOKEN"]
-influx_url = ENV["INFLUX_URL"]
 influx_bucket_name = ENV["INFLUX_BUCKET_NAME"]
-influx_organisation_name = ENV["INFLUX_ORGANISATION_NAME"]
 
-@influx_client = influx_client(influx_url, influx_organisation_name, influx_bucket_name, influx_api_token)
-
+@influx_client = influx_client
 write_api = @influx_client.create_write_api
 
 @git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])

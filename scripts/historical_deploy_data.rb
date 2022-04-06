@@ -1,6 +1,7 @@
 require "octokit"
 require "dotenv"
 require "./lib/release_analyser.rb"
+require "./lib/influx_client.rb"
 
 Dotenv.load
 @git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
@@ -17,4 +18,11 @@ release[:deploy_time] = Date.new(2022,3,29).to_time
 
 pr_data = analyse_work_between(git_client: @git_client, release: release)
 
+@influx_client = influx_client
+write_api = @influx_client.create_write_api
+
 puts pr_data
+
+send_data_to_influx(write_api, pr_data)
+
+@influx_client.close!
