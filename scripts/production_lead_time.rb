@@ -2,6 +2,7 @@ require "net/http"
 require "json"
 require "dotenv"
 require "octokit"
+require "time"
 require "./lib/release_analyser.rb"
 require "./lib/influx_client.rb"
 
@@ -42,7 +43,7 @@ def get_sha(response)
 end
 
 def get_deploy_time(response)
-  response["built_at"]
+  Time.parse(response["built_at"])
 end
 
 def get_last_sha_from_influx(influx_bucket_name, project:, env:)
@@ -68,7 +69,7 @@ def deployment_data_for_influx(sha, deploy_time, project:, env:)
       env: env
     },
     fields: {sha: sha},
-    time: Time.parse(deploy_time).to_i
+    time: deploy_time.to_i
   }
 end
 
