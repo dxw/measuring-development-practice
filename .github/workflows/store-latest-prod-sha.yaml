@@ -8,6 +8,9 @@ env:
   INFLUX_URL: ${{ secrets.INFLUX_URL }}
   INFLUX_BUCKET_NAME: ${{ secrets.INFLUX_BUCKET_NAME }}
   INFLUX_ORGANISATION_NAME: ${{ secrets.INFLUX_ORGANISATION_NAME }}
+  GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+  RPR_STAGING_BASIC_AUTH_USERNAME: ${{ secrets.RPR_STAGING_BASIC_AUTH_USERNAME }}
+  RPR_STAGING_BASIC_AUTH_PASSWORD: ${{ secrets.RPR_STAGING_BASIC_AUTH_PASSWORD }}
 jobs:
   default-job:
     runs-on: ubuntu-latest
@@ -16,6 +19,5 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.7
-          bundler-cache: true
       - run: bundle install
       - run: ruby scripts/production_lead_time.rb
