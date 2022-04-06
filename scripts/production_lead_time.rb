@@ -1,37 +1,36 @@
-require "influxdb-client"
 require "net/http"
 require "json"
 require "dotenv"
+require "octokit"
+require "./lib/release_analyser.rb"
+require "./lib/influx_client.rb"
 
 monitored_sites = [
   {
     project: "roda",
     env: "production",
-    endpoint: "https://www.report-official-development-assistance.service.gov.uk/health_check"
+    endpoint: "https://www.report-official-development-assistance.service.gov.uk/health_check",
+    repository: "UKGovernmentBEIS/beis-report-official-development-assistance"
   },
   {
     project: "roda",
     env: "staging",
-    endpoint: "https://staging.report-official-development-assistance.service.gov.uk/health_check"
+    endpoint: "https://staging.report-official-development-assistance.service.gov.uk/health_check",
+    repository: "UKGovernmentBEIS/beis-report-official-development-assistance"
   },
   {
     project: "rpr",
     env: "production",
-    endpoint: "https://www.regulated-professions.beis.gov.uk/health-check"
+    endpoint: "https://www.regulated-professions.beis.gov.uk/health-check",
+    repository: "UKGovernmentBEIS/regulated-professions-register"
   },
   {
     project: "rpr",
     env: "staging",
-    endpoint: "https://#{ENV["RPR_STAGING_BASIC_AUTH_USERNAME"]}:#{ENV["RPR_STAGING_BASIC_AUTH_PASSWORD"]}@staging.regulated-professions.beis.gov.uk/health-check"
+    endpoint: "https://#{ENV["RPR_STAGING_BASIC_AUTH_USERNAME"]}:#{ENV["RPR_STAGING_BASIC_AUTH_PASSWORD"]}@staging.regulated-professions.beis.gov.uk/health-check",
+    repository: "UKGovernmentBEIS/regulated-professions-register"
   }
 ]
-
-def influx_client(influx_url, influx_organisation_name, influx_bucket_name, influx_api_token)
-  InfluxDB2::Client.new(influx_url, influx_api_token,
-    bucket: influx_bucket_name,
-    org: influx_organisation_name,
-    precision: InfluxDB2::WritePrecision::SECOND)
-end
 
 def get_health_check(url)
   uri = URI(url)
@@ -61,10 +60,8 @@ def get_last_sha_from_influx(influx_bucket_name, project:, env:)
   result[0].records[0].values["_value"]
 end
 
-def send_deployment_data_to_influx(sha, deploy_time, project:, env:)
-  write_api = @influx_client.create_write_api
-
-  data = {
+def deployment_data_for_influx(sha, deploy_time, project:, env:)
+  {
     name: "deployments",
     tags: {
       project: project,
@@ -73,18 +70,16 @@ def send_deployment_data_to_influx(sha, deploy_time, project:, env:)
     fields: {sha: sha},
     time: Time.parse(deploy_time).to_i
   }
-
-  write_api.write(data: data)
 end
 
 Dotenv.load
 
-influx_api_token = ENV["INFLUX_API_TOKEN"]
-influx_url = ENV["INFLUX_URL"]
 influx_bucket_name = ENV["INFLUX_BUCKET_NAME"]
-influx_organisation_name = ENV["INFLUX_ORGANISATION_NAME"]
 
-@influx_client = influx_client(influx_url, influx_organisation_name, influx_bucket_name, influx_api_token)
+@influx_client = influx_client
+write_api = @influx_client.create_write_api
+
+@git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
 
 monitored_sites.each do |site|
   response = get_health_check(site[:endpoint])
@@ -99,7 +94,25 @@ monitored_sites.each do |site|
     puts "#{site[:project]} #{site[:env]}: No new release"
   else
     puts "#{site[:project]} #{site[:env]}: Writing sha to influx"
-    send_deployment_data_to_influx(current_sha, latest_deploy_time, project: site[:project], env: site[:env])
+
+    deploy_data = deployment_data_for_influx(current_sha, latest_deploy_time, project: site[:project], env: site[:env])
+    puts deploy_data
+    send_data_to_influx(write_api, deploy_data)
+
+    repo = site[:repository]
+
+    release = {
+      starting_sha: last_recorded_sha,
+      ending_sha: current_sha,
+      deploy_time: latest_deploy_time,
+      repo: repo,
+      project: site[:project],
+      env: site[:env]
+    }
+
+    pr_data = analyse_release(git_client: @git_client, release: release)
+    puts pr_data
+    send_data_to_influx(write_api, pr_data)
   end
 end
 
