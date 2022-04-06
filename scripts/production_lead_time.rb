@@ -110,7 +110,7 @@ monitored_sites.each do |site|
       env: site[:env]
     }
 
-    pr_data = analyse_work_between(git_client: @git_client, release: release)
+    pr_data = analyse_release(git_client: @git_client, release: release)
     puts pr_data
     send_data_to_influx(write_api, pr_data)
   end

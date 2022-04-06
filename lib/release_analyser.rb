@@ -18,7 +18,7 @@ def pull_request_data_for_influx(pr_number:, release:, started_time:, merged_tim
   }
 end
 
-def analyse_work_between(git_client:, release:)
+def analyse_release(git_client:, release:)
   repo = release[:repo]
   commits_between = git_client.compare(repo, release[:starting_sha], release[:ending_sha]).commits
 
