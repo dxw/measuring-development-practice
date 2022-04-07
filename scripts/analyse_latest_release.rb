@@ -6,6 +6,11 @@ require "time"
 require "./lib/release_analyser.rb"
 require "./lib/influx_client.rb"
 
+# This script gets the data from a health check endpoint (as specified in the site structure below)
+# It uses the SHA of the latest release, and the built_at time, to plot one deployment
+# It also uses the previous recorded SHA (if available in Influx) to analyse the release
+# by comparing the two commits and extracting info about the commits and the PRs they belong to
+
 monitored_sites = [
   {
     project: "roda",

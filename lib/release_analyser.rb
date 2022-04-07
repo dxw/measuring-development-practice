@@ -1,3 +1,15 @@
+# This data is meant to be used by clever manipulation in Flux
+# A sample query to get you started might look something like this:
+# from(bucket: "production-lead-time-test")
+#   |> range(start: 1970-01-01)
+#   |> filter(fn: (r) => r["env"] == "production")
+#   |> filter(fn: (r) => r["project"] == "rpr")
+#   |> group(columns: ["pr", "deploy_sha"], mode:"by")
+# but any actually useful graphs are left as an exercise to the consumer of this data
+
+# If anyone thinks of a better data structure in order to obtain useful Flux visualisations,
+# hopefully this library offers enough information to be able to modify the input as desired
+
 def pull_request_data_for_influx(pr_number:, release:, started_time:, opened_time:, merged_time:)
   {
     name: "pull_requests",
@@ -53,6 +65,14 @@ def analyse_release(git_client:, release:)
     )
   end
 end
+
+# A sample histogram query to get you started:
+# from(bucket: "production-lead-time-test")
+#   |> range(start: 1970-01-01)
+#   |> filter(fn: (r) => r._measurement == "deployments")
+#   |> filter(fn: (r) => r["env"] == "production")
+#   |> filter(fn: (r) => r["project"] == "roda")
+#   |> group(columns: ["deploy_sha"], mode:"by")
 
 def deployment_data_for_influx(sha, deploy_time, project:, env:)
   {

@@ -8,15 +8,32 @@ Dotenv.load
 @influx_client = influx_client
 write_api = @influx_client.create_write_api
 
+# This script uses the GitHub Actions workflows for the deploy workflow to analyse historical releases
+# It relies on the project doing releases via GH Actions
+# It assumes the deploy workflow is named "deploy.yml", but this can be configured if needed
+# It uses the same release analyser as the script that analyses single releases
+
+# Currently only analysing one site at a time, could be extended by using the other sites from
+# "analyse_latest_release.rb"
+
 monitored_sites = [
   {
-    project: "roda",
+    project: "rpr",
     env: "production",
-    endpoint: "https://www.report-official-development-assistance.service.gov.uk/health_check",
-    repository: "UKGovernmentBEIS/beis-report-official-development-assistance",
-    branch_name: "master"
+    endpoint: "https://www.regulated-professions.beis.gov.uk/health-check",
+    repository: "UKGovernmentBEIS/regulated-professions-register",
+    branch_name: "main"
   }
 ]
+
+# This data is meant to be used by clever manipulation in Flux
+# A sample query to get you started might look something like this:
+# from(bucket: "production-lead-time-test")
+#   |> range(start: 1970-01-01)
+#   |> filter(fn: (r) => r["env"] == "production")
+#   |> filter(fn: (r) => r["project"] == "rpr")
+#   |> group(columns: ["pr", "deploy_sha"], mode:"by")
+# but any actually useful graphs are left as an exercise to the consumer of this data
 
 monitored_sites.each do |site|
   repo = site[:repository]
