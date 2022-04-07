@@ -20,4 +20,4 @@ jobs:
         with:
           ruby-version: 2.7
       - run: bundle install
-      - run: ruby scripts/production_lead_time.rb
+      - run: ruby scripts/analyse_latest_release.rb

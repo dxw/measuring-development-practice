@@ -11,25 +11,29 @@ monitored_sites = [
     project: "roda",
     env: "production",
     endpoint: "https://www.report-official-development-assistance.service.gov.uk/health_check",
-    repository: "UKGovernmentBEIS/beis-report-official-development-assistance"
+    repository: "UKGovernmentBEIS/beis-report-official-development-assistance",
+    branch_name: "master"
   },
   {
     project: "roda",
     env: "staging",
     endpoint: "https://staging.report-official-development-assistance.service.gov.uk/health_check",
-    repository: "UKGovernmentBEIS/beis-report-official-development-assistance"
+    repository: "UKGovernmentBEIS/beis-report-official-development-assistance",
+    branch_name: "develop"
   },
   {
     project: "rpr",
     env: "production",
     endpoint: "https://www.regulated-professions.beis.gov.uk/health-check",
-    repository: "UKGovernmentBEIS/regulated-professions-register"
+    repository: "UKGovernmentBEIS/regulated-professions-register",
+    branch_name: "main"
   },
   {
     project: "rpr",
     env: "staging",
     endpoint: "https://#{ENV["RPR_STAGING_BASIC_AUTH_USERNAME"]}:#{ENV["RPR_STAGING_BASIC_AUTH_PASSWORD"]}@staging.regulated-professions.beis.gov.uk/health-check",
-    repository: "UKGovernmentBEIS/regulated-professions-register"
+    repository: "UKGovernmentBEIS/regulated-professions-register",
+    branch_name: "develop"
   }
 ]
 
@@ -59,18 +63,6 @@ def get_last_sha_from_influx(influx_bucket_name, project:, env:)
   # this is horrible, but we only ever want the last record, as our `query`, this
   # gets us started
   result[0].records[0].values["_value"]
-end
-
-def deployment_data_for_influx(sha, deploy_time, project:, env:)
-  {
-    name: "deployments",
-    tags: {
-      project: project,
-      env: env
-    },
-    fields: {sha: sha},
-    time: deploy_time.to_i
-  }
 end
 
 Dotenv.load
