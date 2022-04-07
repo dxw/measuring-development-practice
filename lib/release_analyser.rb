@@ -28,6 +28,13 @@ def pull_request_data_for_influx(pr_number:, release:, started_time:, opened_tim
   }
 end
 
+# A release is defined as "ending" with the commit at the HEAD of the branch at the time of deploy,
+# and "starting" at the previous release's ending commit
+# We need at least these two delimiting commits in order to analyse a release
+#
+# Analysing the release means identifying which pull requests contributed to it,
+# finding the authored date of the earliest commit (authored date doesn't change when rebasing),
+# and the dates when the PR was opened and merged, respectively
 def analyse_release(git_client:, release:)
   repo = release[:repo]
   commits_between = git_client.compare(repo, release[:starting_sha], release[:ending_sha]).commits
@@ -74,6 +81,8 @@ end
 #   |> filter(fn: (r) => r["project"] == "roda")
 #   |> group(columns: ["deploy_sha"], mode:"by")
 
+# NB: The way we use the "fields" right now might not be ideal for the typical Flux use cases,
+# which are geared towards numeric measurements of some kind
 def deployment_data_for_influx(sha, deploy_time, project:, env:)
   {
     name: "deployments",
