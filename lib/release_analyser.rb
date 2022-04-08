@@ -104,7 +104,7 @@ class ReleaseAnalyser
   #
   # Analysing the release means identifying which pull requests contributed to it,
   # and then collecting all the data we want to store in InfluxDB for each PR
-  def analyse_release
+  def pull_requests_data_for_influx
     repo = release[:repo]
     commits_between = git_client.compare(repo, release[:starting_sha], release[:head_sha]).commits
 

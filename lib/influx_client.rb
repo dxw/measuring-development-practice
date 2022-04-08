@@ -7,11 +7,10 @@ def influx_client
   influx_organisation_name = ENV["INFLUX_ORGANISATION_NAME"]
 
   InfluxDB2::Client.new(influx_url, influx_api_token,
-    bucket: influx_bucket_name,
     org: influx_organisation_name,
     precision: InfluxDB2::WritePrecision::SECOND)
 end
 
-def send_data_to_influx(write_api, data)
-  write_api.write(data: data)
+def send_data_to_influx(write_api, data, bucket:)
+  write_api.write(data: data, bucket: bucket)
 end

@@ -73,8 +73,6 @@ end
 
 Dotenv.load
 
-influx_bucket_name = ENV["INFLUX_BUCKET_NAME"]
-
 @influx_client = influx_client
 write_api = @influx_client.create_write_api
 
@@ -85,7 +83,7 @@ monitored_sites.each do |site|
   current_sha = get_sha(response)
   latest_deploy_time = get_deploy_time(response)
 
-  last_recorded_sha = get_last_sha_from_influx(influx_bucket_name, project: site[:project], env: site[:env])
+  last_recorded_sha = get_last_sha_from_influx(ENV["INFLUX_DEPLOYMENTS_BUCKET"], project: site[:project], env: site[:env])
 
   puts "#{Time.now.utc}\nCurrent SHA: #{current_sha}\nLast SHA: #{last_recorded_sha}\n"
 
@@ -108,11 +106,11 @@ monitored_sites.each do |site|
     deploy_data = release_analyser.deployment_data_for_influx
     pp deploy_data
 
-    pr_data = release_analyser.analyse_release
+    pr_data = release_analyser.pull_requests_data_for_influx
     pp pr_data
 
-    send_data_to_influx(write_api, deploy_data)
-    send_data_to_influx(write_api, pr_data)
+    send_data_to_influx(write_api, deploy_data, bucket: ENV["INFLUX_DEPLOYMENTS_BUCKET"])
+    send_data_to_influx(write_api, pr_data, bucket: ENV["INFLUX_PULL_REQUESTS_BUCKET"])
   end
 end
 
