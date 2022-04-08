@@ -4,7 +4,7 @@ on:
 #   - cron: '*/5 * * * *'
   workflow_dispatch:
 env:
-  INFLUX_API_TOKEN: ${{secrets.INFLUX_API_TOKEN}}
+  INFLUX_API_TOKEN: ${{ secrets.INFLUX_API_TOKEN }}
   INFLUX_URL: ${{ secrets.INFLUX_URL }}
   INFLUX_BUCKET_NAME: ${{ secrets.INFLUX_BUCKET_NAME }}
   INFLUX_ORGANISATION_NAME: ${{ secrets.INFLUX_ORGANISATION_NAME }}
