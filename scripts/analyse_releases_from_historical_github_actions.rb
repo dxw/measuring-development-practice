@@ -2,6 +2,7 @@ require "octokit"
 require "dotenv"
 require "./lib/release_analyser.rb"
 require "./lib/influx_client.rb"
+require "pp"
 
 Dotenv.load
 @git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
@@ -27,7 +28,7 @@ monitored_sites = [
 ]
 
 # This data is meant to be used by clever manipulation in Flux
-# A sample query to get you started might look something like this:
+# A sample query might look something like this:
 # from(bucket: "production-lead-time-test")
 #   |> range(start: 1970-01-01)
 #   |> filter(fn: (r) => r["env"] == "production")
@@ -62,14 +63,14 @@ monitored_sites.each do |site|
     previous_release_sha = previous_deploy_run.head_sha
     release = {
       starting_sha: previous_release_sha,
-      ending_sha: deploy_sha,
+      head_sha: deploy_sha,
       deploy_time: deploy_finished_time,
       repo: repo,
       project: site[:project],
       env: site[:env]
     }
-    pr_data = analyse_release(git_client: @git_client, release: release)
-    puts pr_data
+    pr_data = ReleaseAnalyser.new(git_client: @git_client, release: release).analyse_release
+    pp pr_data
     send_data_to_influx(write_api, pr_data)
   end
 end

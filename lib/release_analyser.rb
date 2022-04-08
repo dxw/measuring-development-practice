@@ -1,99 +1,148 @@
-# This data is meant to be used by clever manipulation in Flux
-# A sample query to get you started might look something like this:
-# from(bucket: "production-lead-time-test")
-#   |> range(start: 1970-01-01)
-#   |> filter(fn: (r) => r["env"] == "production")
-#   |> filter(fn: (r) => r["project"] == "rpr")
-#   |> group(columns: ["pr", "deploy_sha"], mode:"by")
-# but any actually useful graphs are left as an exercise to the consumer of this data
-
-# If anyone thinks of a better data structure in order to obtain useful Flux visualisations,
-# hopefully this library offers enough information to be able to modify the input as desired
-
-def pull_request_data_for_influx(pr_number:, release:, started_time:, opened_time:, merged_time:)
-  {
-    name: "pull_requests",
-    tags: {
-      project: release[:project],
-      env: release[:env],
-      pr: pr_number,
-      deploy_sha: release[:ending_sha],
-    },
-    fields: {
-      time_since_first_commit: release[:deploy_time].to_i - started_time.to_i,
-      time_since_pr_opened: release[:deploy_time].to_i - opened_time.to_i,
-      time_since_pr_merged: release[:deploy_time].to_i - merged_time.to_i
-    },
-    time: release[:deploy_time].to_i
-  }
-end
-
-# A release is defined as "ending" with the commit at the HEAD of the branch at the time of deploy,
-# and "starting" at the previous release's ending commit
-# We need at least these two delimiting commits in order to analyse a release
+# This mini-library contains methods to prepare the data for inserting into InfluxDB
+#   where it can be visualised via Flux queries and visualisations
 #
-# Analysing the release means identifying which pull requests contributed to it,
-# finding the authored date of the earliest commit (authored date doesn't change when rebasing),
-# and the dates when the PR was opened and merged, respectively
-def analyse_release(git_client:, release:)
-  repo = release[:repo]
-  commits_between = git_client.compare(repo, release[:starting_sha], release[:ending_sha]).commits
+class ReleaseAnalyser
+  attr_accessor :git_client, :release
 
-  pull_requests = {}
+  def initialize(git_client:, release:)
+    self.git_client = git_client
+    self.release = release
+  end
 
-  commits_between.each do |commit|
-    # PR that this individual commit is part of
-    # ASSUMPTION: the last will be the merged one in case of a commit having been in multiple PRs
-    pull_request = git_client.commit_pulls(repo, commit.sha).last
+  ### GENERIC/COMMON FIELDS
+  #
+  # The timestamp, _time, is what Influx will interpret as the time the "measured event" happened,
+  #   and it must be a Unix timestamp
+  # The range is mandatory for all, or almost all, Flux queries, and it refers to the time window
+  #   for which to process measurement data
+  #   _start and _stop are special Influx fields that map to the start and end of this time window
+  # The special _measurement field corresponds to the "name", and it is how we can filter
+  #   for the entire stream of these specific "measurements"
+  # Tags will allow us to filter and group projects, environments, and individual deploys
+  #
 
-    # merge commits are not the result of PRs so we skip them
-    next if pull_request.nil?
+  ### PULL REQUEST TAGS AND FIELDS
+  #
+  # Pull request data is meant to serve our goals of measuring how long it takes our work
+  #   to go from start to being available to users on production, and identifying where there are any
+  #   slow points in the development pipeline
+  #
+  # Time-related measurements
+  #   * the oldest commit in the PR is a proxy for when work on a specific story started
+  #   * when PRs are opened / merged, to measure whether there are any bottlenecks in our review processes
+  #   * the time when the work was deployed
+  #
+  # A sample query might look something like this:
+  # from(bucket: "production-lead-time-test")
+  #   |> range(start: 2020-01-01)
+  #   |> filter(fn: (r) => r._measurement == "pull_requests")
+  #   |> filter(fn: (r) => r["env"] == "production")
+  #   |> filter(fn: (r) => r["project"] == "rpr")
+  #   |> group(columns: ["pr", "deploy_sha"], mode:"by")
+  # but any actually useful graphs are left as an exercise to the consumer of this data
+  #
+  # Code-related measurements
+  #   * total number of commits in a PR
+  #   * total line changes in a PR
+  #   * number of reviews on a PR
+  #   * average number of line changes per commit in a PR
+  def pull_request_data_for_influx(pr_number, pr_data)
+    {
+      name: "pull_requests",
+      tags: {
+        project: release[:project],
+        env: release[:env],
+        pr: pr_number,
+        deploy_sha: release[:head_sha]
+      },
+      fields: {
+        time_since_first_commit: release[:deploy_time].to_i - pr_data[:started_time].to_i,
+        time_since_pr_opened: release[:deploy_time].to_i - pr_data[:opened_time].to_i,
+        time_since_pr_merged: release[:deploy_time].to_i - pr_data[:merged_time].to_i,
+        number_of_commits: pr_data[:number_of_commits],
+        total_changes: pr_data[:total_changes],
+        changes_per_commit: (pr_data[:total_changes] / pr_data[:number_of_commits]),
+        number_of_reviews: pr_data[:number_of_reviews],
+        number_of_comments: pr_data[:number_of_comments]
+      },
+      time: pr_data[:opened_time].to_i
+    }
+  end
 
-    pr_number = pull_request.number.to_s
-    if pull_requests[pr_number].nil?
-      pull_requests[pr_number] = { commits: [commit.commit], opened_time: pull_request.created_at, merged_time: pull_request.merged_at }
-    else
-      pull_requests[pr_number][:commits] << commit.commit
+  ### DEPLOYMENTS TAGS AND FIELDS
+  #
+  # Deployment data is meant to serve our goal of measuring how frequently we get our work in front of users
+  #
+  # A sample histogram query might look something like this::
+  # from(bucket: "production-lead-time-test")
+  #   |> range(start: 2020-01-01)
+  #   |> filter(fn: (r) => r._measurement == "deployments")
+  #   |> filter(fn: (r) => r["env"] == "production")
+  #   |> filter(fn: (r) => r["project"] == "roda")
+  #   |> group(columns: ["deploy_sha"], mode:"by")
+  #
+  # NB: The way we use the "fields" right now might not be ideal for the typical Flux use cases,
+  #   which are geared towards numeric measurements of some kind
+  def deployment_data_for_influx
+    {
+      name: "deployments",
+      tags: {
+        project: release[:project],
+        env: release[:env],
+        deploy_sha: release[:head_sha]
+      },
+      fields: {
+        deploy_sha: release[:head_sha]
+      },
+      time: release[:deploy_time].to_i
+    }
+  end
+
+  # A release is delimited by the head_sha (the commit at the HEAD of the branch at the time of deploy),
+  # and the "starting" SHA, which is the previous release's HEAD commit
+  # We need at least these two delimiting commits in order to analyse a release
+  #
+  # Analysing the release means identifying which pull requests contributed to it,
+  # and then collecting all the data we want to store in InfluxDB for each PR
+  def analyse_release
+    repo = release[:repo]
+    commits_between = git_client.compare(repo, release[:starting_sha], release[:head_sha]).commits
+
+    pull_requests = {}
+
+    commits_between.each do |commit|
+      # The merged PR that this commit is part of (it could also be part of closed-but-unmerged PRs)
+      pull_request = git_client.commit_pulls(repo, commit.sha).find { |pr| pr.merged_at }
+
+      # merge commits are not the result of PRs so we skip them
+      next if pull_request.nil?
+
+      pr_number = pull_request.number.to_s
+      if pull_requests[pr_number].nil?
+        pull_requests[pr_number] = {
+          commits: [commit],
+          opened_time: pull_request.created_at,
+          merged_time: pull_request.merged_at,
+          number_of_reviews: git_client.pull_request_reviews(repo, pull_request.number).size,
+          number_of_comments: git_client.pull_request_comments(repo, pull_request.number).size
+        }
+      else
+        pull_requests[pr_number][:commits] << commit
+      end
+    end
+
+    pull_requests.each do |pr_number, pr_data|
+      # the oldest authored time of all commits in the PR (rebasing could have rearranged them non-chronologically)
+      pull_requests[pr_number][:started_time] = pr_data[:commits].map { |c| c.commit.author.date }.min
+      pull_requests[pr_number][:number_of_commits] = pr_data[:commits].size
+      total_changes = pr_data[:commits].map do |commit|
+        git_client.commit(repo, commit.sha).stats.total
+      end.sum
+      pull_requests[pr_number][:total_changes] = total_changes
+    end
+
+    pull_requests.map do |pr_number, pr_data|
+      pull_request_data_for_influx(pr_number, pr_data)
     end
   end
-
-  pull_requests.each do |pr_number, pr_data|
-    # the oldest authored time of all commits in the PR (rebasing could have rearranged them non-chronologically)
-    pull_requests[pr_number][:started_time] = pr_data[:commits].map { |c| c.author.date }.min
-  end
-
-  pull_requests.map do |pr_number, pr_data|
-    pull_request_data_for_influx(
-      pr_number: pr_number,
-      started_time: pr_data[:started_time],
-      opened_time: pr_data[:opened_time],
-      merged_time: pr_data[:merged_time],
-      release: release
-    )
-  end
-end
-
-# A sample histogram query to get you started:
-# from(bucket: "production-lead-time-test")
-#   |> range(start: 1970-01-01)
-#   |> filter(fn: (r) => r._measurement == "deployments")
-#   |> filter(fn: (r) => r["env"] == "production")
-#   |> filter(fn: (r) => r["project"] == "roda")
-#   |> group(columns: ["deploy_sha"], mode:"by")
-
-# NB: The way we use the "fields" right now might not be ideal for the typical Flux use cases,
-# which are geared towards numeric measurements of some kind
-def deployment_data_for_influx(sha, deploy_time, project:, env:)
-  {
-    name: "deployments",
-    tags: {
-      project: project,
-      env: env,
-      deploy_sha: sha
-    },
-    fields: {
-      deploy_sha: sha
-    },
-    time: deploy_time.to_i
-  }
 end

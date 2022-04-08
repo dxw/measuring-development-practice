@@ -3,6 +3,7 @@ require "json"
 require "dotenv"
 require "octokit"
 require "time"
+require "pp"
 require "./lib/release_analyser.rb"
 require "./lib/influx_client.rb"
 
@@ -91,25 +92,26 @@ monitored_sites.each do |site|
   if current_sha == last_recorded_sha
     puts "#{site[:project]} #{site[:env]}: No new release"
   else
-    puts "#{site[:project]} #{site[:env]}: Writing sha to influx"
-
-    deploy_data = deployment_data_for_influx(current_sha, latest_deploy_time, project: site[:project], env: site[:env])
-    puts deploy_data
-    send_data_to_influx(write_api, deploy_data)
-
-    repo = site[:repository]
+    puts "#{site[:project]} #{site[:env]}: Writing release analysis to influx"
 
     release = {
       starting_sha: last_recorded_sha,
-      ending_sha: current_sha,
+      head_sha: current_sha,
       deploy_time: latest_deploy_time,
-      repo: repo,
+      repo: site[:repository],
       project: site[:project],
       env: site[:env]
     }
 
-    pr_data = analyse_release(git_client: @git_client, release: release)
-    puts pr_data
+    release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
+
+    deploy_data = release_analyser.deployment_data_for_influx
+    pp deploy_data
+
+    pr_data = release_analyser.analyse_release
+    pp pr_data
+
+    send_data_to_influx(write_api, deploy_data)
     send_data_to_influx(write_api, pr_data)
   end
 end
