@@ -15,29 +15,38 @@ write_api = @influx_client.create_write_api
 # It assumes the deploy workflow is named "deploy.yml", but this can be configured if needed
 # It uses the same release analyser as the script that analyses single releases
 
-# Currently only analysing one site at a time, could be extended by using the other sites from
-# "analyse_latest_release.rb"
-
-monitored_sites = [
+MONITORED_SITES = [
   {
     project: "roda",
     env: "production",
     endpoint: "https://www.report-official-development-assistance.service.gov.uk/health_check",
     repository: "UKGovernmentBEIS/beis-report-official-development-assistance",
     branch_name: "master"
+  },
+  {
+    project: "roda",
+    env: "staging",
+    endpoint: "https://staging.report-official-development-assistance.service.gov.uk/health_check",
+    repository: "UKGovernmentBEIS/beis-report-official-development-assistance",
+    branch_name: "develop"
+  },
+  {
+    project: "rpr",
+    env: "production",
+    endpoint: "https://www.regulated-professions.beis.gov.uk/health-check",
+    repository: "UKGovernmentBEIS/regulated-professions-register",
+    branch_name: "main"
+  },
+  {
+    project: "rpr",
+    env: "staging",
+    endpoint: "https://#{ENV["RPR_STAGING_BASIC_AUTH_USERNAME"]}:#{ENV["RPR_STAGING_BASIC_AUTH_PASSWORD"]}@staging.regulated-professions.beis.gov.uk/health-check",
+    repository: "UKGovernmentBEIS/regulated-professions-register",
+    branch_name: "develop"
   }
 ]
 
-# This data is meant to be used by clever manipulation in Flux
-# A sample query might look something like this:
-# from(bucket: "production-lead-time-test")
-#   |> range(start: 1970-01-01)
-#   |> filter(fn: (r) => r["env"] == "production")
-#   |> filter(fn: (r) => r["project"] == "rpr")
-#   |> group(columns: ["pr", "deploy_sha"], mode:"by")
-# but any actually useful graphs are left as an exercise to the consumer of this data
-
-monitored_sites.each do |site|
+MONITORED_SITES.each do |site|
   repo = site[:repository]
   branch = site[:branch_name]
 
@@ -54,6 +63,9 @@ monitored_sites.each do |site|
     puts "Deploy #{i}: #{deploy_sha} : #{deploy_started_time} - #{deploy_finished_time}"
 
     previous_release_sha = successful_deploys[i + 1]&.head_sha
+    # we cannot analyse the release if we don't know where to delimit it
+    next if previous_release_sha.nil?
+
     release = {
       starting_sha: previous_release_sha,
       head_sha: deploy_sha,
@@ -62,19 +74,11 @@ monitored_sites.each do |site|
       project: site[:project],
       env: site[:env]
     }
-
     release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
-
-    deploy_data = release_analyser.deployment_data_for_influx
-    pp deploy_data
-    send_data_to_influx(write_api, deploy_data, bucket: ENV["INFLUX_DEPLOYMENTS_BUCKET"])
-
-    # we cannot analyse the release if we don't know where to delimit it
-    next if previous_release_sha.nil?
 
     pr_data = release_analyser.pull_requests_data_for_influx
     pp pr_data
-    send_data_to_influx(write_api, pr_data, bucket: ENV["INFLUX_PULL_REQUESTS_BUCKET"])
+    send_data_to_influx(write_api, pr_data)
   end
 end
 

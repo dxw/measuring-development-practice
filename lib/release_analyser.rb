@@ -9,7 +9,7 @@ class ReleaseAnalyser
     self.release = release
   end
 
-  ### GENERIC/COMMON FIELDS
+  ### GENERIC FIELDS
   #
   # The timestamp, _time, is what Influx will interpret as the time the "measured event" happened,
   #   and it must be a Unix timestamp
@@ -20,7 +20,6 @@ class ReleaseAnalyser
   #   for the entire stream of these specific "measurements"
   # Tags will allow us to filter and group projects, environments, and individual deploys
   #
-
   ### PULL REQUEST TAGS AND FIELDS
   #
   # Pull request data is meant to serve our goals of measuring how long it takes our work
@@ -32,23 +31,15 @@ class ReleaseAnalyser
   #   * when PRs are opened / merged, to measure whether there are any bottlenecks in our review processes
   #   * the time when the work was deployed
   #
-  # A sample query might look something like this:
-  # from(bucket: "production-lead-time-test")
-  #   |> range(start: 2020-01-01)
-  #   |> filter(fn: (r) => r._measurement == "pull_requests")
-  #   |> filter(fn: (r) => r["env"] == "production")
-  #   |> filter(fn: (r) => r["project"] == "rpr")
-  #   |> group(columns: ["pr", "deploy_sha"], mode:"by")
-  # but any actually useful graphs are left as an exercise to the consumer of this data
-  #
   # Code-related measurements
   #   * total number of commits in a PR
   #   * total line changes in a PR
-  #   * number of reviews on a PR
   #   * average number of line changes per commit in a PR
-  def pull_request_data_for_influx(pr_number, pr_data)
+  #   * number of reviews on a PR
+  #   * number of comments on a PR
+  def pr_data_for_influx(pr_number, pr_data)
     {
-      name: "pull_requests",
+      name: "deployment",
       tags: {
         project: release[:project],
         env: release[:env],
@@ -56,43 +47,14 @@ class ReleaseAnalyser
         deploy_sha: release[:head_sha]
       },
       fields: {
-        time_since_first_commit: release[:deploy_time].to_i - pr_data[:started_time].to_i,
-        time_since_pr_opened: release[:deploy_time].to_i - pr_data[:opened_time].to_i,
-        time_since_pr_merged: release[:deploy_time].to_i - pr_data[:merged_time].to_i,
-        number_of_commits: pr_data[:number_of_commits],
-        total_changes: pr_data[:total_changes],
-        changes_per_commit: (pr_data[:total_changes] / pr_data[:number_of_commits]),
-        number_of_reviews: pr_data[:number_of_reviews],
-        number_of_comments: pr_data[:number_of_comments]
-      },
-      time: pr_data[:opened_time].to_i
-    }
-  end
-
-  ### DEPLOYMENTS TAGS AND FIELDS
-  #
-  # Deployment data is meant to serve our goal of measuring how frequently we get our work in front of users
-  #
-  # A sample histogram query might look something like this::
-  # from(bucket: "production-lead-time-test")
-  #   |> range(start: 2020-01-01)
-  #   |> filter(fn: (r) => r._measurement == "deployments")
-  #   |> filter(fn: (r) => r["env"] == "production")
-  #   |> filter(fn: (r) => r["project"] == "roda")
-  #   |> group(columns: ["deploy_sha"], mode:"by")
-  #
-  # NB: The way we use the "fields" right now might not be ideal for the typical Flux use cases,
-  #   which are geared towards numeric measurements of some kind
-  def deployment_data_for_influx
-    {
-      name: "deployments",
-      tags: {
-        project: release[:project],
-        env: release[:env],
-        deploy_sha: release[:head_sha]
-      },
-      fields: {
-        deploy_sha: release[:head_sha]
+        seconds_since_first_commit: release[:deploy_time].to_i - pr_data[:started_time].to_i,
+        seconds_since_pr_opened: release[:deploy_time].to_i - pr_data[:opened_time].to_i,
+        seconds_since_pr_merged: release[:deploy_time].to_i - pr_data[:merged_time].to_i,
+        number_of_commits_in_pr: pr_data[:number_of_commits],
+        total_line_changes_in_pr: pr_data[:total_changes],
+        average_changes_per_commit_in_pr: (pr_data[:total_changes] / pr_data[:number_of_commits]),
+        number_of_reviews_on_pr: pr_data[:number_of_reviews],
+        number_of_comments_on_pr: pr_data[:number_of_comments]
       },
       time: release[:deploy_time].to_i
     }
@@ -142,7 +104,7 @@ class ReleaseAnalyser
     end
 
     pull_requests.map do |pr_number, pr_data|
-      pull_request_data_for_influx(pr_number, pr_data)
+      pr_data_for_influx(pr_number, pr_data)
     end
   end
 end
