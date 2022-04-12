@@ -1,4 +1,4 @@
-name: Store latest deploy metadata
+name: Store latest release metadata
 on:
 # schedule:
 #   - cron: '*/5 * * * *'
