@@ -1,7 +1,7 @@
 name: Store latest release metadata
 on:
   schedule:
-    - cron: '*/20 7-22 * * 1-5'
+    - cron: "*/5 7-22 * * 1-5"
   workflow_dispatch:
 env:
   INFLUX_API_TOKEN: ${{ secrets.INFLUX_API_TOKEN }}
