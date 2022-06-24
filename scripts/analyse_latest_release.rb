@@ -42,6 +42,13 @@ MONITORED_SITES = [
     endpoint: "https://#{ENV["RPR_STAGING_BASIC_AUTH_USERNAME"]}:#{ENV["RPR_STAGING_BASIC_AUTH_PASSWORD"]}@staging.regulated-professions.beis.gov.uk/health-check",
     repository: "UKGovernmentBEIS/regulated-professions-register",
     branch_name: "develop"
+  },
+  {
+    project: "sbs",
+    env: "staging",
+    endpoint: "https://api.staging.sidebyside.mind.org.uk/mind-side-by-side/health_check",
+    repository: "dxw/mind-side-by-side",
+    branch_name: "develop"
   }
 ]
 
@@ -80,6 +87,8 @@ write_api = @influx_client.create_write_api
 @git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
 
 MONITORED_SITES.each do |site|
+  puts "Checking #{site[:project]} #{site[:env]}..."
+
   response = get_health_check(site[:endpoint])
   current_sha = get_sha(response)
   latest_deploy_time = get_deploy_time(response)
