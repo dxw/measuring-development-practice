@@ -1,9 +1,0 @@
-# action.yml
-name: 'Before action '
-description: 'Sets up variables to record metrics'
-outputs:
-  start-time:
-    description: 'The time the workflow run started'
-runs:
-  using: 'docker'
-  image: '../before-action-dockerfile'
