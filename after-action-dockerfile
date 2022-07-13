@@ -1,7 +1,0 @@
-FROM alpine
-
-RUN apk add bash
-
-COPY scripts /scripts
-
-ENTRYPOINT ["/scripts/after-action.sh"]
