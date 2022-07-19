@@ -1,6 +1,6 @@
 require "octokit"
-require "./lib/release_analyser.rb"
-require "./lib/influx_client.rb"
+require "./lib/release_analyser"
+require "./lib/influx_client"
 
 require "dotenv"
 Dotenv.load

@@ -3,8 +3,8 @@ require "json"
 require "octokit"
 require "time"
 require "pp"
-require "./lib/release_analyser.rb"
-require "./lib/influx_client.rb"
+require "./lib/release_analyser"
+require "./lib/influx_client"
 
 require "dotenv"
 Dotenv.load
@@ -71,7 +71,7 @@ def get_last_sha_from_influx(influx_bucket_name, project:, env:)
     '|> filter(fn: (r) => r["_measurement"] == "deployment")' \
     '|> filter(fn: (r) => r["project"] == "' + project + '")' \
     '|> filter(fn: (r) => r["env"] == "' + env + '")' \
-    '|> group()' \
+    "|> group()" \
     '|> sort(columns: ["_time"], desc: true)' \
     '|> keep(columns: ["_time", "deploy_sha"])' \
     '|> first(column: "_time")'
