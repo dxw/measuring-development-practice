@@ -67,21 +67,7 @@ class ReleaseAnalyser
   # Analysing the release means identifying which pull requests contributed to it,
   # and then collecting all the data we want to store in InfluxDB for each PR
   def pull_requests_data_for_influx
-    repo = release[:repo]
-
-    pull_requests = get_pull_requests
-
-    pull_requests.each do |pr_number, pr_data|
-      # the oldest authored time of all commits in the PR (rebasing could have rearranged them non-chronologically)
-      pull_requests[pr_number][:started_time] = pr_data[:commits].map { |c| c.commit.author.date }.min
-      pull_requests[pr_number][:number_of_commits] = pr_data[:commits].size
-      total_changes = pr_data[:commits].map do |commit|
-        git_client.commit(repo, commit.sha).stats.total
-      end.sum
-      pull_requests[pr_number][:total_changes] = total_changes
-    end
-
-    pull_requests.map do |pr_number, pr_data|
+    get_pull_requests.map do |pr_number, pr_data|
       pr_data_for_influx(pr_number, pr_data)
     end
   end
@@ -96,23 +82,38 @@ class ReleaseAnalyser
       # The merged PR that this commit is part of (it could also be part of closed-but-unmerged PRs)
       pull_request = git_client.commit_pulls(repo, commit.sha).find { |pr| pr.merged_at }
 
-      # merge commits are not the result of PRs so we skip them
+      # Skip merge commits (they are not the result of PRs so pull_request will be nil)
       next if pull_request.nil?
 
       pr_number = pull_request.number.to_s
       if pull_requests[pr_number].nil?
         pull_requests[pr_number] = {
-          commits: [commit],
+          started_time: authored_date(commit),
           opened_time: pull_request.created_at,
           merged_time: pull_request.merged_at,
+          number_of_commits: 1,
+          total_changes: total_line_changes(commit),
           number_of_reviews: git_client.pull_request_reviews(repo, pull_request.number).size,
           number_of_comments: git_client.pull_request_comments(repo, pull_request.number).size
         }
       else
-        pull_requests[pr_number][:commits] << commit
+        # Check if this commit was authored before the provisional started_time and keep the earlier of the two dates
+        pull_requests[pr_number][:started_time] = [pull_requests[pr_number][:started_time], authored_date(commit)].min
+        pull_requests[pr_number][:number_of_commits] += 1
+        pull_requests[pr_number][:total_changes] += total_line_changes(commit)
       end
     end
 
     pull_requests
+  end
+
+  private
+
+  def authored_date(commit)
+    commit.commit.author.date
+  end
+
+  def total_line_changes(commit)
+    git_client.commit(release[:repo], commit.sha).stats.total
   end
 end
