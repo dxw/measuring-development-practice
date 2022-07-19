@@ -68,6 +68,26 @@ class ReleaseAnalyser
   # and then collecting all the data we want to store in InfluxDB for each PR
   def pull_requests_data_for_influx
     repo = release[:repo]
+
+    pull_requests = get_pull_requests
+
+    pull_requests.each do |pr_number, pr_data|
+      # the oldest authored time of all commits in the PR (rebasing could have rearranged them non-chronologically)
+      pull_requests[pr_number][:started_time] = pr_data[:commits].map { |c| c.commit.author.date }.min
+      pull_requests[pr_number][:number_of_commits] = pr_data[:commits].size
+      total_changes = pr_data[:commits].map do |commit|
+        git_client.commit(repo, commit.sha).stats.total
+      end.sum
+      pull_requests[pr_number][:total_changes] = total_changes
+    end
+
+    pull_requests.map do |pr_number, pr_data|
+      pr_data_for_influx(pr_number, pr_data)
+    end
+  end
+
+  def get_pull_requests
+    repo = release[:repo]
     commits_between = git_client.compare(repo, release[:starting_sha], release[:head_sha]).commits
 
     pull_requests = {}
@@ -93,18 +113,6 @@ class ReleaseAnalyser
       end
     end
 
-    pull_requests.each do |pr_number, pr_data|
-      # the oldest authored time of all commits in the PR (rebasing could have rearranged them non-chronologically)
-      pull_requests[pr_number][:started_time] = pr_data[:commits].map { |c| c.commit.author.date }.min
-      pull_requests[pr_number][:number_of_commits] = pr_data[:commits].size
-      total_changes = pr_data[:commits].map do |commit|
-        git_client.commit(repo, commit.sha).stats.total
-      end.sum
-      pull_requests[pr_number][:total_changes] = total_changes
-    end
-
-    pull_requests.map do |pr_number, pr_data|
-      pr_data_for_influx(pr_number, pr_data)
-    end
+    pull_requests
   end
 end
