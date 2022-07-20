@@ -14,8 +14,8 @@ RSpec.describe ReleaseAnalyser do
   let(:commit_with_stats) { double(:commit_with_stats, stats: double(total: 12)) }
 
   let(:repo) { "dxw/test-repo" }
-  let(:deploy_time) { Time.new(2022, 3, 1)}
-  let(:release) { {repo: repo, project: "a project", env: "test", deploy_time: deploy_time, head_sha: "a1b2c3"} }
+  let(:deploy_time) { Time.new(2022, 3, 1) }
+  let(:release) { double(:release, repo: repo, project: "a project", env: "test", deploy_time: deploy_time, head_sha: "a1b2c3", starting_sha: "z9y8x7") }
 
   let(:compare_response) { double(:compare_response, commits: [commit_1, commit_2, commit_3, commit_4]) }
 
@@ -64,22 +64,22 @@ RSpec.describe ReleaseAnalyser do
       result = {
         name: "deployment",
         tags: {
-          project: release[:project],
-          env: release[:env],
+          project: release.project,
+          env: release.env,
           pr: "1",
-          deploy_sha: release[:head_sha]
+          deploy_sha: release.head_sha
         },
         fields: {
-          seconds_since_first_commit: release[:deploy_time].to_i - pr.started_time.to_i,
-          seconds_since_pr_opened: release[:deploy_time].to_i - pr.opened_time.to_i,
-          seconds_since_pr_merged: release[:deploy_time].to_i - pr.merged_time.to_i,
+          seconds_since_first_commit: release.deploy_time.to_i - pr.started_time.to_i,
+          seconds_since_pr_opened: release.deploy_time.to_i - pr.opened_time.to_i,
+          seconds_since_pr_merged: release.deploy_time.to_i - pr.merged_time.to_i,
           number_of_commits_in_pr: pr.number_of_commits,
           total_line_changes_in_pr: pr.total_line_changes,
           average_changes_per_commit_in_pr: (pr.total_line_changes / pr.number_of_commits),
           number_of_reviews_on_pr: pr.number_of_reviews,
           number_of_comments_on_pr: pr.number_of_comments
         },
-        time: release[:deploy_time].to_i
+        time: release.deploy_time.to_i
       }
 
       expect(release_analyser.pr_data_for_influx(pr)).to eq(result)

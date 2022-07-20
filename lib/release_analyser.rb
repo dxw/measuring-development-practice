@@ -1,3 +1,6 @@
+require_relative "./release"
+require_relative "./pull_request"
+
 # This mini-library contains methods to prepare the data for inserting into InfluxDB
 #   where it can be visualised via Flux queries and visualisations
 #
@@ -41,22 +44,22 @@ class ReleaseAnalyser
     {
       name: "deployment",
       tags: {
-        project: release[:project],
-        env: release[:env],
+        project: release.project,
+        env: release.env,
         pr: pr.number.to_s,
-        deploy_sha: release[:head_sha]
+        deploy_sha: release.head_sha
       },
       fields: {
-        seconds_since_first_commit: release[:deploy_time].to_i - pr.started_time.to_i,
-        seconds_since_pr_opened: release[:deploy_time].to_i - pr.opened_time.to_i,
-        seconds_since_pr_merged: release[:deploy_time].to_i - pr.merged_time.to_i,
+        seconds_since_first_commit: release.deploy_time.to_i - pr.started_time.to_i,
+        seconds_since_pr_opened: release.deploy_time.to_i - pr.opened_time.to_i,
+        seconds_since_pr_merged: release.deploy_time.to_i - pr.merged_time.to_i,
         number_of_commits_in_pr: pr.number_of_commits,
         total_line_changes_in_pr: pr.total_line_changes,
         average_changes_per_commit_in_pr: (pr.total_line_changes / pr.number_of_commits),
         number_of_reviews_on_pr: pr.number_of_reviews,
         number_of_comments_on_pr: pr.number_of_comments
       },
-      time: release[:deploy_time].to_i
+      time: release.deploy_time.to_i
     }
   end
 
@@ -73,8 +76,8 @@ class ReleaseAnalyser
   end
 
   def get_pull_requests
-    repo = release[:repo]
-    commits_between = git_client.compare(repo, release[:starting_sha], release[:head_sha]).commits
+    repo = release.repo
+    commits_between = git_client.compare(repo, release.starting_sha, release.head_sha).commits
 
     pull_requests = []
 
@@ -116,6 +119,6 @@ class ReleaseAnalyser
   end
 
   def total_line_changes(commit)
-    git_client.commit(release[:repo], commit.sha).stats.total
+    git_client.commit(release.repo, commit.sha).stats.total
   end
 end
