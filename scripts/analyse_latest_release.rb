@@ -107,14 +107,14 @@ MONITORED_SITES.each do |site|
   else
     puts "#{site[:project]} #{site[:env]}: Writing release analysis to influx"
 
-    release = {
+    release = Release.new(
       starting_sha: last_recorded_sha,
       head_sha: current_sha,
       deploy_time: latest_deploy_time,
       repo: site[:repository],
       project: site[:project],
       env: site[:env]
-    }
+    )
 
     release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
 
