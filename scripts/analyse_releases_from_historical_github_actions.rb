@@ -66,14 +66,14 @@ MONITORED_SITES.each do |site|
     # we cannot analyse the release if we don't know where to delimit it
     next if previous_release_sha.nil?
 
-    release = {
+    release = Release.new(
       starting_sha: previous_release_sha,
       head_sha: deploy_sha,
       deploy_time: deploy_finished_time,
       repo: repo,
       project: site[:project],
       env: site[:env]
-    }
+    )
     release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
 
     pr_data = release_analyser.pull_requests_data_for_influx
