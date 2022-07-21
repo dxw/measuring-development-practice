@@ -18,7 +18,7 @@ release = Release.new(
 )
 
 release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
-pr_data = release_analyser.pull_requests_data_for_influx
+pr_data = release_analyser.data_for_influx
 puts pr_data
 
 # @influx_client = influx_client
