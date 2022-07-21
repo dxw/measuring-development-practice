@@ -72,13 +72,14 @@ MONITORED_SITES.each do |site|
       deploy_time: deploy_finished_time,
       repo: repo,
       project: site[:project],
-      env: site[:env]
+      env: site[:env],
+      git_client: @git_client
     )
-    release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
+    release_data = release.data_for_influx
 
-    pr_data = release_analyser.data_for_influx
-    pp pr_data
-    send_data_to_influx(write_api, pr_data)
+    pp release_data
+
+    send_data_to_influx(write_api, release_data)
   end
 end
 
