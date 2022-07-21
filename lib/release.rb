@@ -17,6 +17,10 @@ class Release
     pull_requests.map(&:data_for_influx)
   end
 
+  def data_for_debugging
+    pull_requests.map(&:data_for_debugging)
+  end
+
   private
 
   def pull_requests

@@ -114,8 +114,9 @@ MONITORED_SITES.each do |site|
       env: site[:env]
     )
     release_data = release.data_for_influx
+    release_data_debug = release.data_for_debugging
 
-    pp release_data
+    pp release_data_debug
 
     send_data_to_influx(write_api, release_data)
   end
