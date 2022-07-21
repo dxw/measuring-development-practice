@@ -1,11 +1,9 @@
 require "octokit"
-require "./lib/release_analyser"
+require "./lib/release"
 require "./lib/influx_client"
 
 require "dotenv"
 Dotenv.load
-
-@git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
 
 # This script is mostly useful for debug; uncomment the last section to write the data
 release = Release.new(
@@ -17,11 +15,10 @@ release = Release.new(
   deploy_time: Time.new(2022, 3, 29, 15, 0, 5)
 )
 
-release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
-pr_data = release_analyser.data_for_influx
-puts pr_data
+release_data = release.data_for_influx
+pp release_data
 
 # @influx_client = influx_client
 # write_api = @influx_client.create_write_api
-# send_data_to_influx(write_api, pr_data)
+# send_data_to_influx(write_api, release_data)
 # @influx_client.close!

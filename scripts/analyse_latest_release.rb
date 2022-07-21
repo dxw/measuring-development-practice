@@ -3,7 +3,7 @@ require "json"
 require "octokit"
 require "time"
 require "pp"
-require "./lib/release_analyser"
+require "./lib/release"
 require "./lib/influx_client"
 
 require "dotenv"
@@ -84,8 +84,6 @@ end
 @influx_client = influx_client
 write_api = @influx_client.create_write_api
 
-@git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
-
 MONITORED_SITES.each do |site|
   puts "Checking #{site[:project]} #{site[:env]}..."
 
@@ -115,13 +113,11 @@ MONITORED_SITES.each do |site|
       project: site[:project],
       env: site[:env]
     )
+    release_data = release.data_for_influx
 
-    release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
+    pp release_data
 
-    pr_data = release_analyser.data_for_influx
-    pp pr_data
-
-    send_data_to_influx(write_api, pr_data)
+    send_data_to_influx(write_api, release_data)
   end
 end
 

@@ -1,4 +1,3 @@
-require_relative "./release"
 require_relative "./pull_request"
 
 # This mini-library contains methods to prepare the data for inserting into InfluxDB
@@ -7,13 +6,9 @@ require_relative "./pull_request"
 class ReleaseAnalyser
   attr_accessor :git_client, :release
 
-  def initialize(git_client:, release:)
-    self.git_client = git_client
+  def initialize(release:, git_client:)
     self.release = release
-  end
-
-  def data_for_influx
-    get_pull_requests.map(&:data_for_influx)
+    self.git_client = git_client
   end
 
   # A release is delimited by the head_sha (the commit at the HEAD of the branch at the time of deploy),
