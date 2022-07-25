@@ -1,4 +1,6 @@
+require "spec_helper"
 require_relative "../lib/release_analyser"
+require_relative "../lib/release"
 
 RSpec.describe ReleaseAnalyser do
   let(:git_client) {
@@ -13,8 +15,7 @@ RSpec.describe ReleaseAnalyser do
   let(:commit_with_stats) { double(:commit_with_stats, stats: double(total: 12)) }
 
   let(:repo) { "dxw/test-repo" }
-  let(:deploy_time) { Time.new(2022, 3, 1) }
-  let(:release) { double(:release, repo: repo, project: "a project", env: "test", deploy_time: deploy_time, head_sha: "a1b2c3", starting_sha: "z9y8x7") }
+  let(:release) { build(:release, repo: repo, git_client: git_client) }
 
   let(:compare_response) { double(:compare_response, commits: [commit_1, commit_2, commit_3, commit_4]) }
 
@@ -39,24 +40,8 @@ RSpec.describe ReleaseAnalyser do
     end
 
     it "fetches pull requests for the specified release" do
-      pr1 = PullRequest.new(1, release: release)
-      pr1.started_time = "2021-12-02"
-      pr1.opened_time = "2021-12-31"
-      pr1.merged_time = "2022-01-01"
-      pr1.number_of_commits = 2
-      pr1.total_line_changes = 24
-      pr1.number_of_reviews = 1
-      pr1.number_of_comments = 2
-
-      pr2 = PullRequest.new(2, release: release)
-      pr2.started_time = "2021-12-03"
-      pr2.opened_time = "2022-02-01"
-      pr2.merged_time = "2022-02-02"
-      pr2.number_of_commits = 2
-      pr2.total_line_changes = 24
-      pr2.number_of_reviews = 1
-      pr2.number_of_comments = 2
-
+      pr1 = build(:pull_request, number: 1, release: release, started_time: "2021-12-02", opened_time: "2021-12-31", merged_time: "2022-01-01")
+      pr2 = build(:pull_request, number: 2, release: release, started_time: "2021-12-03", opened_time: "2022-02-01", merged_time: "2022-02-02")
       result = [pr1, pr2]
 
       expect(release_analyser.get_pull_requests).to eq(result)
