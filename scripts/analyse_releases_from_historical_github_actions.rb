@@ -1,6 +1,6 @@
 require "octokit"
-require "./lib/release_analyser.rb"
-require "./lib/influx_client.rb"
+require "./lib/release_analyser"
+require "./lib/influx_client"
 require "pp"
 
 require "dotenv"
@@ -66,19 +66,21 @@ MONITORED_SITES.each do |site|
     # we cannot analyse the release if we don't know where to delimit it
     next if previous_release_sha.nil?
 
-    release = {
+    release = Release.new(
       starting_sha: previous_release_sha,
       head_sha: deploy_sha,
       deploy_time: deploy_finished_time,
       repo: repo,
       project: site[:project],
-      env: site[:env]
-    }
-    release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
+      env: site[:env],
+      git_client: @git_client
+    )
+    release_data = release.data_for_influx
+    release_data_debug = release.data_for_debugging
 
-    pr_data = release_analyser.pull_requests_data_for_influx
-    pp pr_data
-    send_data_to_influx(write_api, pr_data)
+    pp release_data_debug
+
+    send_data_to_influx(write_api, release_data)
   end
 end
 
