@@ -1,4 +1,6 @@
+require "spec_helper"
 require_relative "../lib/release_analyser"
+require_relative "../lib/release"
 
 RSpec.describe ReleaseAnalyser do
   let(:git_client) {
@@ -13,8 +15,7 @@ RSpec.describe ReleaseAnalyser do
   let(:commit_with_stats) { double(:commit_with_stats, stats: double(total: 12)) }
 
   let(:repo) { "dxw/test-repo" }
-  let(:deploy_time) { Time.new(2022, 3, 1) }
-  let(:release) { double(:release, repo: repo, project: "a project", env: "test", deploy_time: deploy_time, head_sha: "a1b2c3", starting_sha: "z9y8x7") }
+  let(:release) { build(:release, repo: repo, git_client: git_client) }
 
   let(:compare_response) { double(:compare_response, commits: [commit_1, commit_2, commit_3, commit_4]) }
 
