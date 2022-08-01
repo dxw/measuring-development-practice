@@ -1,9 +1,6 @@
 require_relative "./release"
 require_relative "./pull_request"
 
-# This mini-library contains methods to prepare the data for inserting into InfluxDB
-#   where it can be visualised via Flux queries and visualisations
-#
 class ReleaseAnalyser
   attr_accessor :git_client, :release
 
@@ -12,7 +9,7 @@ class ReleaseAnalyser
     self.release = release
   end
 
-  def pull_requests_data_for_influx
+  def data_for_influx
     get_pull_requests.map(&:data_for_influx)
   end
 

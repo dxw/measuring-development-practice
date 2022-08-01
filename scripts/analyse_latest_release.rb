@@ -118,7 +118,7 @@ MONITORED_SITES.each do |site|
 
     release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
 
-    pr_data = release_analyser.pull_requests_data_for_influx
+    pr_data = release_analyser.data_for_influx
     pp pr_data
 
     send_data_to_influx(write_api, pr_data)
