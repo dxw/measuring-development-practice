@@ -1,5 +1,4 @@
 require_relative "../lib/release_analyser"
-require_relative "../lib/pull_request"
 
 RSpec.describe ReleaseAnalyser do
   let(:git_client) {
@@ -47,42 +46,6 @@ RSpec.describe ReleaseAnalyser do
 
       expect(pulls[1].number).to eq(2)
       expect(pulls[1].started_time).to eq("2021-12-03")
-    end
-  end
-
-  describe "#pr_data_for_influx" do
-    it "returns the transformed PR data" do
-      pr = PullRequest.new(1)
-      pr.started_time = "2021-12-02"
-      pr.opened_time = "2021-12-31"
-      pr.merged_time = "2022-01-01"
-      pr.number_of_commits = 2
-      pr.total_line_changes = 24
-      pr.number_of_reviews = 1
-      pr.number_of_comments = 2
-
-      result = {
-        name: "deployment",
-        tags: {
-          project: release.project,
-          env: release.env,
-          pr: "1",
-          deploy_sha: release.head_sha
-        },
-        fields: {
-          seconds_since_first_commit: release.deploy_time.to_i - pr.started_time.to_i,
-          seconds_since_pr_opened: release.deploy_time.to_i - pr.opened_time.to_i,
-          seconds_since_pr_merged: release.deploy_time.to_i - pr.merged_time.to_i,
-          number_of_commits_in_pr: pr.number_of_commits,
-          total_line_changes_in_pr: pr.total_line_changes,
-          average_changes_per_commit_in_pr: (pr.total_line_changes / pr.number_of_commits),
-          number_of_reviews_on_pr: pr.number_of_reviews,
-          number_of_comments_on_pr: pr.number_of_comments
-        },
-        time: release.deploy_time.to_i
-      }
-
-      expect(release_analyser.pr_data_for_influx(pr)).to eq(result)
     end
   end
 end
