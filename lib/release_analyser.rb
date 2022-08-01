@@ -37,24 +37,24 @@ class ReleaseAnalyser
   #   * average number of line changes per commit in a PR
   #   * number of reviews on a PR
   #   * number of comments on a PR
-  def pr_data_for_influx(pr_number, pr_data)
+  def pr_data_for_influx(pr)
     {
       name: "deployment",
       tags: {
         project: release[:project],
         env: release[:env],
-        pr: pr_number,
+        pr: pr.number.to_s,
         deploy_sha: release[:head_sha]
       },
       fields: {
-        seconds_since_first_commit: release[:deploy_time].to_i - pr_data[:started_time].to_i,
-        seconds_since_pr_opened: release[:deploy_time].to_i - pr_data[:opened_time].to_i,
-        seconds_since_pr_merged: release[:deploy_time].to_i - pr_data[:merged_time].to_i,
-        number_of_commits_in_pr: pr_data[:number_of_commits],
-        total_line_changes_in_pr: pr_data[:total_changes],
-        average_changes_per_commit_in_pr: (pr_data[:total_changes] / pr_data[:number_of_commits]),
-        number_of_reviews_on_pr: pr_data[:number_of_reviews],
-        number_of_comments_on_pr: pr_data[:number_of_comments]
+        seconds_since_first_commit: release[:deploy_time].to_i - pr.started_time.to_i,
+        seconds_since_pr_opened: release[:deploy_time].to_i - pr.opened_time.to_i,
+        seconds_since_pr_merged: release[:deploy_time].to_i - pr.merged_time.to_i,
+        number_of_commits_in_pr: pr.number_of_commits,
+        total_line_changes_in_pr: pr.total_line_changes,
+        average_changes_per_commit_in_pr: (pr.total_line_changes / pr.number_of_commits),
+        number_of_reviews_on_pr: pr.number_of_reviews,
+        number_of_comments_on_pr: pr.number_of_comments
       },
       time: release[:deploy_time].to_i
     }
@@ -67,8 +67,8 @@ class ReleaseAnalyser
   # Analysing the release means identifying which pull requests contributed to it,
   # and then collecting all the data we want to store in InfluxDB for each PR
   def pull_requests_data_for_influx
-    get_pull_requests.map do |pr_number, pr_data|
-      pr_data_for_influx(pr_number, pr_data)
+    get_pull_requests.map do |pr|
+      pr_data_for_influx(pr)
     end
   end
 
@@ -76,7 +76,7 @@ class ReleaseAnalyser
     repo = release[:repo]
     commits_between = git_client.compare(repo, release[:starting_sha], release[:head_sha]).commits
 
-    pull_requests = {}
+    pull_requests = []
 
     commits_between.each do |commit|
       # The merged PR that this commit is part of (it could also be part of closed-but-unmerged PRs)
@@ -85,22 +85,24 @@ class ReleaseAnalyser
       # Skip merge commits (they are not the result of PRs so pull_request will be nil)
       next if pull_request.nil?
 
-      pr_number = pull_request.number.to_s
-      if pull_requests[pr_number].nil?
-        pull_requests[pr_number] = {
-          started_time: authored_date(commit),
-          opened_time: pull_request.created_at,
-          merged_time: pull_request.merged_at,
-          number_of_commits: 1,
-          total_changes: total_line_changes(commit),
-          number_of_reviews: git_client.pull_request_reviews(repo, pull_request.number).size,
-          number_of_comments: git_client.pull_request_comments(repo, pull_request.number).size
-        }
+      pr_number = pull_request.number
+      if (pr = pull_requests.find { |pr| pr.number == pr_number }).nil?
+        pr = PullRequest.new(pr_number)
+
+        pr.started_time = authored_date(commit)
+        pr.opened_time = pull_request.created_at
+        pr.merged_time = pull_request.merged_at
+        pr.number_of_commits = 1
+        pr.total_line_changes = total_line_changes(commit)
+        pr.number_of_reviews = git_client.pull_request_reviews(repo, pr_number).size
+        pr.number_of_comments = git_client.pull_request_comments(repo, pr_number).size
+
+        pull_requests << pr
       else
         # Check if this commit was authored before the provisional started_time and keep the earlier of the two dates
-        pull_requests[pr_number][:started_time] = [pull_requests[pr_number][:started_time], authored_date(commit)].min
-        pull_requests[pr_number][:number_of_commits] += 1
-        pull_requests[pr_number][:total_changes] += total_line_changes(commit)
+        pr.started_time = [pr.started_time, authored_date(commit)].min
+        pr.number_of_commits += 1
+        pr.total_line_changes += total_line_changes(commit)
       end
     end
 
