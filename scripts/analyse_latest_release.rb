@@ -3,8 +3,8 @@ require "json"
 require "octokit"
 require "time"
 require "pp"
-require "./lib/release_analyser.rb"
-require "./lib/influx_client.rb"
+require "./lib/release"
+require "./lib/influx_client"
 
 require "dotenv"
 Dotenv.load
@@ -71,7 +71,7 @@ def get_last_sha_from_influx(influx_bucket_name, project:, env:)
     '|> filter(fn: (r) => r["_measurement"] == "deployment")' \
     '|> filter(fn: (r) => r["project"] == "' + project + '")' \
     '|> filter(fn: (r) => r["env"] == "' + env + '")' \
-    '|> group()' \
+    "|> group()" \
     '|> sort(columns: ["_time"], desc: true)' \
     '|> keep(columns: ["_time", "deploy_sha"])' \
     '|> first(column: "_time")'
@@ -83,8 +83,6 @@ end
 
 @influx_client = influx_client
 write_api = @influx_client.create_write_api
-
-@git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
 
 MONITORED_SITES.each do |site|
   puts "Checking #{site[:project]} #{site[:env]}..."
@@ -107,21 +105,20 @@ MONITORED_SITES.each do |site|
   else
     puts "#{site[:project]} #{site[:env]}: Writing release analysis to influx"
 
-    release = {
+    release = Release.new(
       starting_sha: last_recorded_sha,
       head_sha: current_sha,
       deploy_time: latest_deploy_time,
       repo: site[:repository],
       project: site[:project],
       env: site[:env]
-    }
+    )
+    release_data = release.data_for_influx
+    release_data_debug = release.data_for_debugging
 
-    release_analyser = ReleaseAnalyser.new(git_client: @git_client, release: release)
+    pp release_data_debug
 
-    pr_data = release_analyser.pull_requests_data_for_influx
-    pp pr_data
-
-    send_data_to_influx(write_api, pr_data)
+    send_data_to_influx(write_api, release_data)
   end
 end
 
