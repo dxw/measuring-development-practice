@@ -20,7 +20,7 @@ MONITORED_SITES = [
     env: "production",
     endpoint: "https://www.report-official-development-assistance.service.gov.uk/health_check",
     repository: "UKGovernmentBEIS/beis-report-official-development-assistance",
-    branch_name: "master"
+    branch_name: "main"
   },
   {
     project: "roda",
