@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ruby/setup-ruby@v1.113.3
+      - uses: ruby/setup-ruby@v1.127.0
         with:
           bundler-cache: true
       - name: Run tests
