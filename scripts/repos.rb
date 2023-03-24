@@ -4,6 +4,7 @@ require "pp"
 
 require "dotenv"
 Dotenv.load
+STDOUT.sync = true
 
 def topics(repo_name)
   topics = @git_client.topics(repo_name, {accept: Octokit::Preview::PREVIEW_TYPES[:topics]})
@@ -12,27 +13,30 @@ def topics(repo_name)
   topics[:names]
 end
 
-@git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
+def all_repos
+  page = 1
+  repos = []
 
-page = 1
-repos = []
+  # repos = @git_client.organization_repositories("dxw", per_page: 100, page: page).reject(&:archived?)
 
-# repos = @git_client.organization_repositories("dxw", per_page: 100, page: page).reject(&:archived?)
+  while true
+    puts "Fetching page #{page}..."
+    page_repos = @git_client.organization_repositories("dxw", per_page: 100, page: page)
+    break if page_repos.empty?
 
-while true
-  puts "Fetching page #{page}..."
-  page_repos = @git_client.organization_repositories("dxw", per_page: 100, page: page)
-  break if page_repos.empty?
-
-  repos += page_repos.reject(&:archived?)
-  page +=1
+    repos += page_repos.reject(&:archived?)
+    page +=1
+  end
+  repos
 end
+
+@git_client = Octokit::Client.new(access_token: ENV["GITHUB_ACCESS_TOKEN"])
 
 repos_without_tech_team = []
 private_repos_without_staff_team = []
 repos_unknown_teams = []
 
-repos.each do |repo|
+all_repos.each do |repo|
   print "."
 
   begin
@@ -45,7 +49,7 @@ repos.each do |repo|
     if repo.private? && !teams.include?("staff") && !topics(repo.full_name).include?("govpress")
       private_repos_without_staff_team << repo.full_name
     end
-  rescue Exception
+  rescue Octokit::Forbidden
     repos_unknown_teams << repo.full_name
   end
 end
@@ -63,7 +67,7 @@ unless private_repos_without_staff_team.empty?
 end
 
 unless repos_unknown_teams.empty?
-  puts "The script could not determine which teams have access to the following repositories:"
+  puts "The script did not have permission to see who can access these repositories:"
   puts "\t#{repos_unknown_teams.join("\n\t")}"
   puts "Contact the repository owners or a dxw GitHub admin if you think the tech and/or staff teams should have access."
 end
